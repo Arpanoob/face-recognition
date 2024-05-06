@@ -18,9 +18,9 @@ const AddPerson = () => {
 
   useEffect(() => {
     AWS.config.update({
-      accessKeyId: process.env.REACT_APP_AWS_ACCESS_KEY_ID,
-      secretAccessKey: process.env.REACT_APP_AWS_SECRET_ACCESS_KEY,
-      region: process.env.REACT_APP_AWS_REGION,
+      accessKeyId:"AKIATCKAN3ZBHPQB3EV2",
+      secretAccessKey: "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",
+      region: "us-east-1",
     });
   }, []);
 
