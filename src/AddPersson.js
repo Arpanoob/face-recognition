@@ -3,12 +3,18 @@ import * as facemesh from "@tensorflow-models/face-landmarks-detection";
 import { Buffer } from "buffer";
 import AWS from "aws-sdk";
 import { drawMesh } from "./utilities";
+// Define the image variable here
 import image from "./diaphragm.png";
-import "./App.css";
 
 const AddPerson = () => {
   const [uploadResultMessage, setUploadResultMessage] = useState(
     "Please Click Image Send ."
+  );
+  const canvasRef = useRef(null);
+
+  console.log(
+    process.env.REACT_APP_AWS_ACCESS_KEY_ID,
+    process.env.REACT_APP_AWS_SECRET_ACCESS_KEY
   );
   const [personName, setPersonName] = useState("");
   const [capturedImage, setCapturedImage] = useState("");
@@ -18,10 +24,11 @@ const AddPerson = () => {
 
   useEffect(() => {
     AWS.config.update({
-      accessKeyId:"AKIATCKAN3ZBHPQB3EV2",
-      secretAccessKey: "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",
+      accessKeyId: process.env.REACT_APP_AWS_ACCESS_KEY,
+      secretAccessKey: process.env.REACT_APP_AWS_SECRET_ACCESS_KEY,
       region: "us-east-1",
     });
+    runFacemesh();
   }, []);
 
   const s3 = new AWS.S3();
@@ -39,23 +46,58 @@ const AddPerson = () => {
   const captureImage = async () => {
     const video = videoRef.current;
     const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const context = canvas.getContext("2d");
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const imageDataURL = canvas.toDataURL("image/jpeg");
+    console.log(canvas);
+    if (canvas !== null) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext("2d");
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imageDataURL = canvas.toDataURL("image/jpeg");
 
-    video.srcObject.getTracks().forEach((track) => track.stop());
-    clearInterval(faceDetectionInterval);
+      video.srcObject.getTracks().forEach((track) => track.stop());
+      clearInterval(faceDetectionInterval);
 
-    setCapturedImage(imageDataURL);
+      setCapturedImage(imageDataURL);
+    }
   };
-
+  const runFacemesh = async () => {
+    const net = await facemesh.load(
+      facemesh.SupportedPackages.mediapipeFacemesh
+    );
+    faceDetectionInterval = setInterval(() => {
+      detect(net);
+    }, 10);
+  };
   const removeImage = () => {
     setCapturedImage("");
     setIsCameraOpen(false);
   };
 
+  const detect = async (net) => {
+    if (
+      typeof videoRef.current !== "undefined" &&
+      videoRef.current !== null &&
+      videoRef.current.readyState === 4
+    ) {
+      const video = videoRef.current;
+      const videoWidth = video.videoWidth;
+      const videoHeight = video.videoHeight;
+
+      video.width = videoWidth;
+      video.height = videoHeight;
+
+      canvasRef.current.width = videoWidth;
+      canvasRef.current.height = videoHeight;
+
+      const face = await net.estimateFaces({ input: video });
+      if (canvasRef.current !== null) {
+        const ctx = canvasRef.current.getContext("2d");
+        requestAnimationFrame(() => {
+          drawMesh(face, ctx);
+        });
+      }
+    }
+  };
   const sendImage = async () => {
     if (!capturedImage || !personName) return;
 
@@ -108,6 +150,20 @@ const AddPerson = () => {
             muted
           ></video>
         )}
+        {
+          <canvas
+            ref={canvasRef}
+            style={{
+              position: "absolute",
+              marginLeft: "auto",
+              marginRight: "auto",
+              left: 0,
+              right: 0,
+              textAlign: "center",
+              zIndex: 9,
+            }}
+          />
+        }
         {!isCameraOpen && !capturedImage && (
           <img src={image} className="diaphragm" alt="Diaphragm" />
         )}

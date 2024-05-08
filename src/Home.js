@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, meta } from "react";
 import { BrowserRouter as Router, useNavigate } from "react-router-dom";
 import * as tf from "@tensorflow/tfjs";
 import * as facemesh from "@tensorflow-models/face-landmarks-detection";
@@ -9,6 +9,7 @@ import image from "./diaphragm.png";
 import "./App.css";
 
 const Home = () => {
+  console.log("qwertyu", process.env.REACT_APP_AWS_ACCESS_KEY);
   const [isAuth, setAuth] = useState(false);
   const [uploadResultMessage, setUploadResultMessage] = useState(
     "Please Click Image to Authenticate"
@@ -23,8 +24,8 @@ const Home = () => {
 
   useEffect(() => {
     AWS.config.update({
-      accessKeyId: "AKIATCKAN3ZBHPQB3EV2",
-      secretAccessKey: "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",
+      accessKeyId: process.env.REACT_APP_AWS_ACCESS_KEY,
+      secretAccessKey: process.env.REACT_APP_AWS_SECRET_ACCESS_KEY,
       region: "us-east-1",
     });
     runFacemesh();
@@ -60,11 +61,12 @@ const Home = () => {
       canvasRef.current.height = videoHeight;
 
       const face = await net.estimateFaces({ input: video });
-
-      const ctx = canvasRef.current.getContext("2d");
-      requestAnimationFrame(() => {
-        drawMesh(face, ctx);
-      });
+      if (canvasRef.current !== null) {
+        const ctx = canvasRef.current.getContext("2d");
+        requestAnimationFrame(() => {
+          drawMesh(face, ctx);
+        });
+      }
     }
   };
 
